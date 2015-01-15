@@ -189,7 +189,9 @@ module CarrierWave
         # [NilClass] no authenticated url available
         #
         def authenticated_url(options = {})
-          if ['AWS', 'Google', 'Rackspace', 'OpenStack'].include?(@uploader.fog_credentials[:provider])
+          cache_key = "#{@uploader.fog_directory}_#{path}".gsub(" ","")
+          return Rails.cache.read(cache_key) if Rails.cache.read(cache_key)
+          _authenticated_url = if ['AWS', 'Google', 'Rackspace', 'OpenStack'].include?(@uploader.fog_credentials[:provider])
             # avoid a get by using local references
             local_directory = connection.directories.new(:key => @uploader.fog_directory)
             local_file = local_directory.files.new(:key => path)
@@ -203,6 +205,7 @@ module CarrierWave
           else
             nil
           end
+          Rails.cache.write(cache_key, _authenticated_url, expires_in: @uploader.fog_authenticated_url_expiration)
         end
 
         ##
